@@ -14,6 +14,7 @@
  * 
  * 
  * Version 1.6
+ * https://github.com/hamiller/tracker-search-provider
  * 
  */
 

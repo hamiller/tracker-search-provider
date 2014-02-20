@@ -3,5 +3,5 @@
   "name": "Tracker Search Provider",
   "description": "Provide tracker search results in overview",
   "shell-version": ["3.10"],
-  "url": ""
+  "url": "https://github.com/hamiller/tracker-search-provider"
 }
