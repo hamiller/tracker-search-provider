@@ -11,11 +11,11 @@
  * Version 1.5
  *
  * https://github.com/cewee/tracker-search
- * 
- * 
+ *
+ *
  * Version 1.6
  * https://github.com/hamiller/tracker-search-provider
- * 
+ *
  */
 
 const Main          = imports.ui.main;
@@ -36,7 +36,7 @@ const DEFAULT_EXEC = 'xdg-open';
 /* Limit search results, since number of displayed items is limited */
 const MAX_RESULTS = 10;
 const MAX_ROWS =3; // this is currently ignored, but bug report is filed : https://bugzilla.gnome.org/show_bug.cgi?id=675527
-const ICON_SIZE = 50;
+const ICON_SIZE = 64;
 
 const CategoryType = {
     FTS : 0,
@@ -44,52 +44,67 @@ const CategoryType = {
     FOLDERS : 2
 };
 
+// in the end it call IconGrid.addItem('this')
 const TrackerResult = new Lang.Class({
     Name: 'TrackerResult',
 
    _init: function(resultMeta) {
-        this.actor = new St.Bin({
-            style_class: 'result',
-            reactive: true,
-            can_focus: true,
-            track_hover: true,
-            accessible_role: Atk.Role.PUSH_BUTTON
-        });
+	   	this.actor = new St.Bin({ reactive: true,
+                                  track_hover: true });
+	   	this._resultMeta = resultMeta;
+        this.icon = new IconGrid.BaseIcon(resultMeta.name,
+                                          { showLabel: true,
+                                            createIcon: Lang.bind(this, this.createIcon) } );
 
-        var MainBox = new St.BoxLayout( { style_class: 'result-content', vertical: true });
-
-        this.icon = new IconGrid.BaseIcon(resultMeta.filename);
         this.actor.child = this.icon.actor;
         this.actor.label_actor = this.icon.label;
 
-        this.actor.set_child(MainBox);
-        var icon = resultMeta.createIcon(ICON_SIZE);
-        // View for regular files
-        if (resultMeta.contentType != "inode/directory" ) {
-            let title = new St.Label({ text: resultMeta.name, style_class: 'title' });
-            MainBox.add(title, { x_fill: false, x_align: St.Align.START });
-            let IconInfoFrame = new St.BoxLayout({ style_class: 'icon-info-frame', vertical: false });
-            let IconBox = new St.BoxLayout({ vertical: false });
-            MainBox.add(IconInfoFrame, { x_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
-            IconBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
-            IconInfoFrame.add(IconBox, { x_fill: false, x_align: St.Align.START });
-            let SideBox = new St.BoxLayout({ style_class: 'side-box', vertical: true });
-            IconInfoFrame.add(SideBox, { x_fill: false, x_align: St.Align.START });
-            let fileName = new St.Label({ text: resultMeta.filename, style_class: 'result-detail' });
-            SideBox.add(fileName, { x_fill: false, x_align: St.Align.START });
-            let lastMod = new St.Label({ text: resultMeta.lastMod, style_class: 'result-detail' });
-            SideBox.add(lastMod, { x_fill: false, x_align: St.Align.START });
-            let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-path' });
-            MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
-        } else { // View for folder elements
-            let titleDir = new St.Label({ text: resultMeta.name, style_class: 'titleDir' });
-            MainBox.add(titleDir, { x_fill: false, y_fill: true, x_align: St.Align.START, y_align: St.Align.MIDDLE });
-            let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-pathDir' });
-            MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
-            MainBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
-        }
-    }
 
+
+
+
+
+// 	   	this.actor = new St.Bin({ style_class: 'result',
+// 			          reactive: true,
+// 			          can_focus: true,
+//                                   track_hover: true,
+//                                   accessible_role: Atk.Role.PUSH_BUTTON});
+//         var MainBox = new St.BoxLayout( { style_class: 'result-content', vertical: true });
+//         this.actor.set_child(MainBox);
+//         var icon = resultMeta.createIcon(ICON_SIZE);
+//         // View for regular files
+//         if (resultMeta.contentType != "inode/directory" ) {
+//             let title = new St.Label({ text: resultMeta.name, style_class: 'title' });
+//             MainBox.add(title, { x_fill: false, x_align: St.Align.START });
+//             let IconInfoFrame = new St.BoxLayout({ style_class: 'icon-info-frame', vertical: false });
+//             let IconBox = new St.BoxLayout({ vertical: false });
+//             MainBox.add(IconInfoFrame, { x_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
+//             IconBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
+//             IconInfoFrame.add(IconBox, { x_fill: false, x_align: St.Align.START });
+//             let SideBox = new St.BoxLayout({ style_class: 'side-box', vertical: true });
+//             IconInfoFrame.add(SideBox, { x_fill: false, x_align: St.Align.START });
+//             let fileName = new St.Label({ text: resultMeta.filename, style_class: 'result-detail' });
+//             SideBox.add(fileName, { x_fill: false, x_align: St.Align.START });
+//             let lastMod = new St.Label({ text: resultMeta.lastMod, style_class: 'result-detail' });
+//             SideBox.add(lastMod, { x_fill: false, x_align: St.Align.START });
+//             let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-path' });
+//             MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
+//         } else { // View for folder elements
+//             let titleDir = new St.Label({ text: resultMeta.name, style_class: 'titleDir' });
+//             MainBox.add(titleDir, { x_fill: false, y_fill: true, x_align: St.Align.START,  y_align: St.Align.MIDDLE });
+//             let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-pathDir' });
+//             MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
+//             MainBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
+//         }
+    },
+
+	createIcon: function () {
+        let box = new Clutter.Box();
+        let icon = this._resultMeta.createIcon(ICON_SIZE);
+
+		box.add_child(icon);
+        return box;
+    }
 });
 
 var trackerSearchProviderFiles = null;
