@@ -19,7 +19,7 @@
  */
 
 const Main          = imports.ui.main;
-const Clutter 		= imports.gi.Clutter;
+const Clutter       = imports.gi.Clutter;
 const Search        = imports.ui.search;
 const SearchDisplay = imports.ui.searchDisplay;
 const Gio           = imports.gi.Gio;
@@ -28,7 +28,7 @@ const IconGrid      = imports.ui.iconGrid;
 const Util          = imports.misc.util;
 const Tracker       = imports.gi.Tracker;
 const St            = imports.gi.St;
-const Atk 	        = imports.gi.Atk;
+const Atk           = imports.gi.Atk;
 const Lang          = imports.lang;
 
 /* let xdg-open pick the appropriate program to open/execute the file */
@@ -44,65 +44,40 @@ const CategoryType = {
     FOLDERS : 2
 };
 
-// in the end it call IconGrid.addItem('this')
+
 const TrackerResult = new Lang.Class({
     Name: 'TrackerResult',
 
    _init: function(resultMeta) {
-	   	this.actor = new St.Bin({ reactive: true,
+        this._resultMeta = resultMeta;
+
+        // #################################################
+        // not really much data
+        let _content_actor = new St.Bin({ });
+        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" + resultMeta.filename + "\n" + resultMeta.prettyPath,
+                                          { createIcon: Lang.bind(this, this.createIcon) } );
+        _content_actor.set_child(_content_icon.actor);
+        _content_actor.label_actor = _content_icon.label;
+
+        let _content = new St.BoxLayout({ });
+        _content = { actor: _content_actor, icon: _content_icon,  x_align: St.Align.START };
+
+
+        // ##################################################
+        // in the end it's called by IconGrid.addItem('this')
+        this.actor = new St.Bin({ reactive: true,
                                   track_hover: true });
-	   	this._resultMeta = resultMeta;
-        this.icon = new IconGrid.BaseIcon(resultMeta.name,
-                                          { showLabel: true,
-                                            createIcon: Lang.bind(this, this.createIcon) } );
 
-        this.actor.child = this.icon.actor;
-        this.actor.label_actor = this.icon.label;
-
-
-
-
-
-
-// 	   	this.actor = new St.Bin({ style_class: 'result',
-// 			          reactive: true,
-// 			          can_focus: true,
-//                                   track_hover: true,
-//                                   accessible_role: Atk.Role.PUSH_BUTTON});
-//         var MainBox = new St.BoxLayout( { style_class: 'result-content', vertical: true });
-//         this.actor.set_child(MainBox);
-//         var icon = resultMeta.createIcon(ICON_SIZE);
-//         // View for regular files
-//         if (resultMeta.contentType != "inode/directory" ) {
-//             let title = new St.Label({ text: resultMeta.name, style_class: 'title' });
-//             MainBox.add(title, { x_fill: false, x_align: St.Align.START });
-//             let IconInfoFrame = new St.BoxLayout({ style_class: 'icon-info-frame', vertical: false });
-//             let IconBox = new St.BoxLayout({ vertical: false });
-//             MainBox.add(IconInfoFrame, { x_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
-//             IconBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.START, y_align: St.Align.MIDDLE });
-//             IconInfoFrame.add(IconBox, { x_fill: false, x_align: St.Align.START });
-//             let SideBox = new St.BoxLayout({ style_class: 'side-box', vertical: true });
-//             IconInfoFrame.add(SideBox, { x_fill: false, x_align: St.Align.START });
-//             let fileName = new St.Label({ text: resultMeta.filename, style_class: 'result-detail' });
-//             SideBox.add(fileName, { x_fill: false, x_align: St.Align.START });
-//             let lastMod = new St.Label({ text: resultMeta.lastMod, style_class: 'result-detail' });
-//             SideBox.add(lastMod, { x_fill: false, x_align: St.Align.START });
-//             let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-path' });
-//             MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
-//         } else { // View for folder elements
-//             let titleDir = new St.Label({ text: resultMeta.name, style_class: 'titleDir' });
-//             MainBox.add(titleDir, { x_fill: false, y_fill: true, x_align: St.Align.START,  y_align: St.Align.MIDDLE });
-//             let prettyPath = new St.Label({ text: resultMeta.prettyPath, style_class: 'result-pathDir' });
-//             MainBox.add(prettyPath, { x_fill: false, x_align: St.Align.START });
-//             MainBox.add(icon, { x_fill: false, y_fill: false, x_align: St.Align.MIDDLE, y_align: St.Align.MIDDLE });
-//         }
+        this.actor.set_child(_content.actor);
+        this.actor.label_actor = _content.actor.label_actor;
+        this.icon = _content.icon;
     },
 
-	createIcon: function () {
+    createIcon: function () {
         let box = new Clutter.Box();
         let icon = this._resultMeta.createIcon(ICON_SIZE);
 
-		box.add_child(icon);
+        box.add_child(icon);
         return box;
     }
 });
@@ -115,9 +90,9 @@ const TrackerSearchProvider = new Lang.Class({
     Name : 'TrackerSearchProvider',
 
     _init : function(title, categoryType) {
-	    this._categoryType = categoryType;
-		this._title = title;
-		this.id = 'tracker-search-' + title;
+        this._categoryType = categoryType;
+        this._title = title;
+        this.id = 'tracker-search-' + title;
     },
 
 
@@ -146,40 +121,40 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     _getQuery : function (terms) {
-    	var query = "";
+        var query = "";
 
-    	if (this._categoryType == CategoryType.FTS) {
-    	    var terms_in_sparql = "";
+        if (this._categoryType == CategoryType.FTS) {
+            var terms_in_sparql = "";
 
             for (var i = 0; i < terms.length; i++) {
-        		if (terms_in_sparql.length > 0) terms_in_sparql += " ";
-    		    terms_in_sparql += terms[i] + "*";
+                if (terms_in_sparql.length > 0) terms_in_sparql += " ";
+                terms_in_sparql += terms[i] + "*";
             }
-    	    // Technically, the tag should really be matched
-    	    // separately not as one phrase too.
-    	    query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE { { ";
-       	    query += " ?urn a nfo:FileDataObject .";
-       	    query += " ?urn fts:match \"" + terms_in_sparql + "\" } UNION { ?urn nao:hasTag ?tag . FILTER (fn:contains (fn:lower-case (nao:prefLabel(?tag)), \"" + terms + "\")) }";
-       	    query += " OPTIONAL { ?urn nfo:belongsToContainer ?parent .  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2)). } ORDER BY DESC(nfo:fileLastModified(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
-       	    //  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2) is supposed to filter out folders, but this fails for 'root' folders in which is indexed (as 'Music', 'Documents' and so on ..) - WHY?
+            // Technically, the tag should really be matched
+            // separately not as one phrase too.
+            query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE { { ";
+            query += " ?urn a nfo:FileDataObject .";
+            query += " ?urn fts:match \"" + terms_in_sparql + "\" } UNION { ?urn nao:hasTag ?tag . FILTER (fn:contains (fn:lower-case (nao:prefLabel(?tag)), \"" + terms + "\")) }";
+            query += " OPTIONAL { ?urn nfo:belongsToContainer ?parent .  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2)). } ORDER BY DESC(nfo:fileLastModified(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
+            //  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2) is supposed to filter out folders, but this fails for 'root' folders in which is indexed (as 'Music', 'Documents' and so on ..) - WHY?
 
-    	} else if (this._categoryType == CategoryType.FILES) {
-    	    // TODO: Do we really want this?
-    	} else if (this._categoryType == CategoryType.FOLDERS) {
-    	    query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE {";
-    	    query += "  ?urn a nfo:Folder .";
-    	    query += "  FILTER (fn:contains (fn:lower-case (nfo:fileName(?urn)), '" + terms + "')) .";
-    	    query += "  ?urn nfo:belongsToContainer ?parent ;";
-    	    query += "  tracker:available true .";
-    	    query += "} ORDER BY DESC(nfo:fileLastModified(?urn)) DESC(nie:contentCreated(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
-    	}
+        } else if (this._categoryType == CategoryType.FILES) {
+            // TODO: Do we really want this?
+        } else if (this._categoryType == CategoryType.FOLDERS) {
+            query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE {";
+            query += "  ?urn a nfo:Folder .";
+            query += "  FILTER (fn:contains (fn:lower-case (nfo:fileName(?urn)), '" + terms + "')) .";
+            query += "  ?urn nfo:belongsToContainer ?parent ;";
+            query += "  tracker:available true .";
+            query += "} ORDER BY DESC(nfo:fileLastModified(?urn)) DESC(nie:contentCreated(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
+        }
 
-    	return query;
+        return query;
     },
 
     createResultObject: function (result, terms) {
-        let result = new TrackerResult(result);
-        return result;
+        let res = new TrackerResult(result);
+        return res;
     },
 
 
@@ -200,7 +175,7 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     _getResultSet: function (cursor) {
-    	let results = [];
+        let results = [];
 
         try {
             while (cursor != null && cursor.next(null)) {
@@ -212,12 +187,12 @@ const TrackerSearchProvider = new Lang.Class({
                 var lastMod = "Modified: " + lastMod.split('T')[0];
                 var filename = decodeURI(uri.split('/').pop());
                 // if file does not exist, it won't be shown
-        		var f = Gio.file_new_for_uri(uri);
+                var f = Gio.file_new_for_uri(uri);
 
-        		if(!f.query_exists(null)) {continue;}
+                if(!f.query_exists(null)) {continue;}
 
-        		var path = f.get_path();
-		        // clean up path
+                var path = f.get_path();
+                // clean up path
                 var prettyPath = path.substr(0,path.length - filename.length).replace("/home/" + GLib.get_user_name() , "~");
                 // contentType is an array, the index "1" set true,
                 // if function is uncertain if type is the right one
@@ -261,7 +236,7 @@ const TrackerSearchProvider = new Lang.Class({
 
         try {
             var conn = Tracker.SparqlConnection.get(null);
-        	var query = this._getQuery(terms);
+            var query = this._getQuery(terms);
             var cursor = conn.query(query, null);
         } catch (error) {
             global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
@@ -289,26 +264,26 @@ function init(meta) {
 }
 
 function enable() {
-	if (!trackerSearchProviderFolders){
-    	trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFolders);
-	}
+    if (!trackerSearchProviderFolders){
+        trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
+        Main.overview.addSearchProvider(trackerSearchProviderFolders);
+    }
 
-	if (!trackerSearchProviderFiles) {
-    	trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFiles);
-	}
+    if (!trackerSearchProviderFiles) {
+        trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
+        Main.overview.addSearchProvider(trackerSearchProviderFiles);
+    }
 }
 
 function disable() {
     if (trackerSearchProviderFiles){
-		Main.overview.removeSearchProvider(trackerSearchProviderFiles);
-    	trackerSearchProviderFiles = null;
+        Main.overview.removeSearchProvider(trackerSearchProviderFiles);
+        trackerSearchProviderFiles = null;
     }
 
     if (trackerSearchProviderFolders) {
-    	Main.overview.removeSearchProvider(trackerSearchProviderFolders);
-    	trackerSearchProviderFolders = null;
+        Main.overview.removeSearchProvider(trackerSearchProviderFolders);
+        trackerSearchProviderFolders = null;
     }
 }
 
