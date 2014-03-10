@@ -19,9 +19,9 @@ Since it looks like it was abandoned, I completely refactored it to work again i
 Just open the gnone-shell overview and start typing. When your typed word is longer than 2 chars, the tracker database os searched and the results displayed.
 
 You can also only search specific file types: You use this by typing 
-'v myvideoname...' -> v means to display only videos
-'i mystrangeimagename....' -> i means to display only images
-'m somemusicfile..' -> m means to display only audio files
+* 'v myvideoname...' -> v means to display only videos
+* 'i mystrangeimagename....' -> i means to display only images
+* 'm somemusicfile..' -> m means to display only audio files
 
 
 ## Installation
