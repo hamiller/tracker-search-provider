@@ -35,7 +35,6 @@ const Lang          = imports.lang;
 const DEFAULT_EXEC = 'xdg-open';
 /* Limit search results, since number of displayed items is limited */
 const MAX_RESULTS = 10;
-const MAX_ROWS =3; // this is currently ignored, but bug report is filed : https://bugzilla.gnome.org/show_bug.cgi?id=675527
 const ICON_SIZE = 64;
 
 const CategoryType = {
@@ -50,27 +49,26 @@ const TrackerResult = new Lang.Class({
 
    _init: function(resultMeta) {
 	   	this._resultMeta = resultMeta;
-
         // #################################################
         // not really much data
-        let _content_actor = new St.Bin({ });
-        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" + resultMeta.filename + "\n" + resultMeta.prettyPath,
-                                          { createIcon: Lang.bind(this, this.createIcon) } );
+        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" + 
+                                                  resultMeta.filename + "\n" + 
+                                                  resultMeta.prettyPath,
+                                                  { createIcon: Lang.bind(this, this.createIcon),
+                                                    showLabel: true} );
+
+        let _content_actor = new St.Bin({ style_class: 'result',
+                                  reactive: true,
+                                  track_hover: true });
         _content_actor.set_child(_content_icon.actor);
         _content_actor.label_actor = _content_icon.label;
 
-        let _content = new St.BoxLayout({ });
-        _content = { actor: _content_actor, icon: _content_icon,  x_align: St.Align.START };
 
 
 	   	// ##################################################
 	   	// in the end it's called by IconGrid.addItem('this')
-	   	this.actor = new St.Bin({ reactive: true,
-                                  track_hover: true });
-
-	    this.actor.set_child(_content.actor);
-        this.actor.label_actor = _content.actor.label_actor;
-		this.icon = _content.icon;
+	   	this.actor = _content_actor;
+		this.icon = _content_icon;
     },
 
 	createIcon: function () {
@@ -159,7 +157,6 @@ const TrackerSearchProvider = new Lang.Class({
         let res = new TrackerResult(result);
         return res;
     },
-
 
     getResultMetas: function(resultIds, callback) {
         let metas = [];
