@@ -174,9 +174,10 @@ const TrackerSearchProvider = new Lang.Class({
         Util.spawn([DEFAULT_EXEC, fileName]);
     },
 
-    _getResultSet: function (cursor) {
+    _getResultSet: function (obj, result) {
     	let results = [];
-
+        var cursor = obj.query_finish(result);
+        
         try {
             while (cursor != null && cursor.next(null)) {
                 var urn = cursor.get_string(0)[0];
@@ -227,6 +228,17 @@ const TrackerSearchProvider = new Lang.Class({
         this.searchSystem.setResults(this, results);
     },
 
+    _connection_ready : function(object, result, terms, filetype) {
+        try {
+            var conn = Tracker.SparqlConnection.get_finish(result);
+            var query = this._getQuery(terms, filetype);
+            var cursor = conn.query_async(query, null, this._getResultSet.bind(this));
+        } catch (error) {
+            global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
+            global.log(error.message);
+        }
+    },
+
     getInitialResultSet : function(terms) {
         // terms holds array of search items
         // check if 1st search term is >2 letters else drop the request
@@ -252,15 +264,7 @@ const TrackerSearchProvider = new Lang.Class({
 
         }
 
-        try {
-            var conn = Tracker.SparqlConnection.get(null);
-        	var query = this._getQuery(terms, filetype);
-            var cursor = conn.query(query, null);
-        } catch (error) {
-            global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
-            global.log(error.message);
-        }
-        this._getResultSet(cursor);
+        Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype));
         return [];
     },
 
