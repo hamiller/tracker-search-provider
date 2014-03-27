@@ -264,7 +264,12 @@ const TrackerSearchProvider = new Lang.Class({
 
         }
 
-        Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype));
+	try {
+            Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype));
+	} catch (error) {
+	    global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
+            global.log(error.message);
+	}
         return [];
     },
 
