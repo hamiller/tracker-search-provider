@@ -21,7 +21,6 @@
 const Main          = imports.ui.main;
 const Clutter 		= imports.gi.Clutter;
 const Search        = imports.ui.search;
-const SearchDisplay = imports.ui.searchDisplay;
 const Gio           = imports.gi.Gio;
 const GLib          = imports.gi.GLib;
 const IconGrid      = imports.ui.iconGrid;
@@ -47,12 +46,14 @@ const CategoryType = {
 const TrackerResult = new Lang.Class({
     Name: 'TrackerResult',
 
-   _init: function(resultMeta) {
-	   	this._resultMeta = resultMeta;
-        // #################################################
+_init: function(resultMeta) {
+global.log("-------- fmi init der TrackerResult");
+		this._resultMeta = resultMeta;
+        
+		// #################################################
         // not really much data
-        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" + 
-                                                  resultMeta.filename + "\n" + 
+        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" +
+                                                  resultMeta.filename + "\n" +
                                                   resultMeta.prettyPath,
                                                   { createIcon: Lang.bind(this, this.createIcon),
                                                     showLabel: true} );
@@ -65,10 +66,10 @@ const TrackerResult = new Lang.Class({
 
 
 
-	   	// ##################################################
-	   	// in the end it's called by IconGrid.addItem('this')
-	   	this.actor = _content_actor;
-		this.icon = _content_icon;
+        // ##################################################
+        // in the end it's called by IconGrid.addItem('this')
+        this.actor = _content_actor;
+        this.icon = _content_icon;
     },
 
 	createIcon: function () {
@@ -91,6 +92,10 @@ const TrackerSearchProvider = new Lang.Class({
 	    this._categoryType = categoryType;
 		this._title = title;
 		this.id = 'tracker-search-' + title;
+		this.appInfo = {get_name : function() {return 'tracker-needle';},
+						get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/gnome/256x256/actions/system-search.png");},
+						get_id : function() {return this.id;}
+       	};
     },
 
 
@@ -113,12 +118,14 @@ const TrackerSearchProvider = new Lang.Class({
             'contentType': contentType,
             'createIcon' : function(size) {
                 let icon = Gio.app_info_get_default_for_type(type,null).get_icon();
-                return imports.gi.St.TextureCache.get_default().load_gicon(null, icon, size);
+				return new St.Icon({ gicon: icon,
+                                 icon_size: size });
             }
          };
     },
 
     _getQuery : function (terms, filetype) {
+global.log("-------- fmi getQuery: " +terms);
     	var query = "";
 
     	if (this._categoryType == CategoryType.FTS) {
@@ -154,6 +161,7 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     createResultObject: function (result, terms) {
+global.log("createResultObject called");
         let res = new TrackerResult(result);
         return res;
     },
@@ -163,10 +171,12 @@ const TrackerSearchProvider = new Lang.Class({
         for (let i = 0; i < resultIds.length; i++) {
             metas.push(this._getResultMeta(resultIds[i]));
         }
+global.log("-------- fmi getResultMetas:" +metas.length + " resultIds: " + resultIds.length);
         callback(metas);
     },
 
     activateResult : function(result) {
+global.log("-------- fmi activateResult");
         // Action executed when clicked on result
         var uri = result.id;
         var f = Gio.file_new_for_uri(uri);
@@ -174,7 +184,7 @@ const TrackerSearchProvider = new Lang.Class({
         Util.spawn([DEFAULT_EXEC, fileName]);
     },
 
-    _getResultSet: function (obj, result) {
+    _getResultSet: function (obj, result, callback) {
     	let results = [];
         var cursor = obj.query_finish(result);
         
@@ -222,24 +232,25 @@ const TrackerSearchProvider = new Lang.Class({
                 });
             };
         } catch (error) {
-            global.log("TrackerSearchProvider: Could not traverse results cursor: " + error.message);
+            //global.log("TrackerSearchProvider: Could not traverse results cursor: " + error.message);
         }
-        //print("Tracker _getResultSet found : " + results.length);
-        this.searchSystem.setResults(this, results);
+global.log("-------- fmi gefunden: " + results.length);
+		callback(results);
     },
 
-    _connection_ready : function(object, result, terms, filetype) {
+    _connection_ready : function(object, result, terms, filetype, callback) {
+global.log("-------- fmi _connection_ready " + this.id);
         try {
             var conn = Tracker.SparqlConnection.get_finish(result);
             var query = this._getQuery(terms, filetype);
-            var cursor = conn.query_async(query, null, this._getResultSet.bind(this));
+            var cursor = conn.query_async(query, null, Lang.bind(this, this._getResultSet, callback));
         } catch (error) {
-            global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
-            global.log(error.message);
+            //global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
+            //global.log(error.message);
         }
     },
 
-    getInitialResultSet : function(terms) {
+    getInitialResultSet : function(terms, callback, cancellable) {
         // terms holds array of search items
         // check if 1st search term is >2 letters else drop the request
         if(terms.length ===1 && terms[0].length < 3) {
@@ -264,54 +275,76 @@ const TrackerSearchProvider = new Lang.Class({
 
         }
 
-	try {
-            Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype));
-	} catch (error) {
-	    global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
-            global.log(error.message);
-	}
+		try {
+		    Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype, callback));
+		} catch (error) {
+			//global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
+		    //global.log(error.message);
+		}
         return [];
     },
 
-    getSubsearchResultSet : function(previousResults, terms) {
+    getSubsearchResultSet : function(previousResults, terms, callback, cancellable) {
         // check if 1st search term is >2 letters else drop the request
         if(terms.length ===1 && terms[0].length < 3) {
             return [];
         }
-        this.getInitialResultSet(terms);
+        this.getInitialResultSet(terms, callback, cancellable);
         return [];
     },
 
     filterResults : function(results, max) {
+global.log("-------- fmi filterResults results:" + results.length + " max:" + max);
         return results.slice(0, max);
+    },
+
+    launchSearch: function(terms) {
+        global.log("-------- fmi launchSearch called");
+		if(terms.length > 1) {            
+			// tracker-needle doesn't support file types
+			terms = terms[1];	
+        }
+		
+		let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms, null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
+        let context = global.create_app_launch_context(0, -1);
+		app.launch([], context);
+    },
+
+    _addItem: function(display) {
+		global.log("--------  fmi ListSearchResults _addItem");
+        this._content.add_actor(display.actor);
     }
 });
 
-function init(meta) {
+function init() {
+global.log("-------- fmi init?");
 }
 
 function enable() {
-	if (!trackerSearchProviderFolders){
-    	trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFolders);
-	}
+//	if (!trackerSearchProviderFolders){
+//  	    trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
+    	//Main.overview.addSearchProvider(trackerSearchProviderFolders);
+//		Main.overview.viewSelector._searchResults._searchSystem.addProvider(trackerSearchProviderFolders);
+//	}
 
 	if (!trackerSearchProviderFiles) {
     	trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFiles);
+    	//Main.overview.addSearchProvider(trackerSearchProviderFiles);
+		Main.overview.viewSelector._searchResults._searchSystem.addProvider(trackerSearchProviderFiles);
 	}
 }
 
 function disable() {
     if (trackerSearchProviderFiles){
-		Main.overview.removeSearchProvider(trackerSearchProviderFiles);
+		//Main.overview.removeSearchProvider(trackerSearchProviderFiles);
+		Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(trackerSearchProviderFiles);
     	trackerSearchProviderFiles = null;
     }
 
-    if (trackerSearchProviderFolders) {
-    	Main.overview.removeSearchProvider(trackerSearchProviderFolders);
-    	trackerSearchProviderFolders = null;
-    }
+//    if (trackerSearchProviderFolders) {
+    	//Main.overview.removeSearchProvider(trackerSearchProviderFolders);
+//		Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(trackerSearchProviderFolders);
+//    	trackerSearchProviderFolders = null;
+//    }
 }
-
 
