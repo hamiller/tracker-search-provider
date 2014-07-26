@@ -29,6 +29,6 @@ To install, simply copy the 3 files into a directory '~/.local/share/gnome-shell
 (the directory 'tracker-search-provider@sinnix.de' has to be created first).
 Then reload your shell (you can also logout/login) and acitvate it with gnome-tweak-tool or the extensions website.
 Be sure you have the tracker framework installed and running and you have installed the GObject introspection (gir1.2-tracker package).
-
+You do also need tracker-needle.
 
 Please feel free to contribute (especially for displaying the results itself)
