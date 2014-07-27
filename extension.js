@@ -19,16 +19,15 @@
  */
 
 const Main          = imports.ui.main;
-const Clutter 		= imports.gi.Clutter;
+const Clutter       = imports.gi.Clutter;
 const Search        = imports.ui.search;
-const SearchDisplay = imports.ui.searchDisplay;
 const Gio           = imports.gi.Gio;
 const GLib          = imports.gi.GLib;
 const IconGrid      = imports.ui.iconGrid;
 const Util          = imports.misc.util;
 const Tracker       = imports.gi.Tracker;
 const St            = imports.gi.St;
-const Atk 	        = imports.gi.Atk;
+const Atk           = imports.gi.Atk;
 const Lang          = imports.lang;
 
 /* let xdg-open pick the appropriate program to open/execute the file */
@@ -43,43 +42,6 @@ const CategoryType = {
     FOLDERS : 2
 };
 
-
-const TrackerResult = new Lang.Class({
-    Name: 'TrackerResult',
-
-   _init: function(resultMeta) {
-	   	this._resultMeta = resultMeta;
-        // #################################################
-        // not really much data
-        let _content_icon = new IconGrid.BaseIcon(resultMeta.name + "\n" + 
-                                                  resultMeta.filename + "\n" + 
-                                                  resultMeta.prettyPath,
-                                                  { createIcon: Lang.bind(this, this.createIcon),
-                                                    showLabel: true} );
-
-        let _content_actor = new St.Bin({ style_class: 'result',
-                                  reactive: true,
-                                  track_hover: true });
-        _content_actor.set_child(_content_icon.actor);
-        _content_actor.label_actor = _content_icon.label;
-
-
-
-	   	// ##################################################
-	   	// in the end it's called by IconGrid.addItem('this')
-	   	this.actor = _content_actor;
-		this.icon = _content_icon;
-    },
-
-	createIcon: function () {
-        let box = new Clutter.Box();
-        let icon = this._resultMeta.createIcon(ICON_SIZE);
-
-		box.add_child(icon);
-        return box;
-    }
-});
-
 var trackerSearchProviderFiles = null;
 var trackerSearchProviderFolders = null;
 
@@ -88,74 +50,70 @@ const TrackerSearchProvider = new Lang.Class({
     Name : 'TrackerSearchProvider',
 
     _init : function(title, categoryType) {
-	    this._categoryType = categoryType;
-		this._title = title;
-		this.id = 'tracker-search-' + title;
-    },
-
-
-
-    _getResultMeta : function(resultId) {
-        let type = resultId.contentType;
-        let name = resultId.name;
-        let path = resultId.path;
-        let filename = resultId.filename;
-        let lastMod = resultId.lastMod;
-        let contentType = resultId.contentType;
-        let prettyPath = resultId.prettyPath;
-        return {
-            'id':       resultId,
-            'name':     name,
-            'path':     path,
-            'filename': filename,
-            'lastMod':  lastMod,
-            'prettyPath':  prettyPath,
-            'contentType': contentType,
-            'createIcon' : function(size) {
-                let icon = Gio.app_info_get_default_for_type(type,null).get_icon();
-                return imports.gi.St.TextureCache.get_default().load_gicon(null, icon, size);
-            }
-         };
+        this._categoryType = categoryType;
+        this._title = title;
+        this.id = 'tracker-search-' + title;
+        this.appInfo = {get_name : function() {return 'tracker-needle';},
+                        get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/gnome/256x256/actions/system-search.png");},
+                        get_id : function() {return this.id;}
+        };
+        this.resultsMap = new Map();
     },
 
     _getQuery : function (terms, filetype) {
-    	var query = "";
+        var query = "";
 
-    	if (this._categoryType == CategoryType.FTS) {
-    	    var terms_in_sparql = "";
+        if (this._categoryType == CategoryType.FTS) {
+            var terms_in_sparql = "";
 
             for (var i = 0; i < terms.length; i++) {
-        		if (terms_in_sparql.length > 0) terms_in_sparql += " ";
-    		    terms_in_sparql += terms[i] + "*";
+                if (terms_in_sparql.length > 0) terms_in_sparql += " ";
+                terms_in_sparql += terms[i] + "*";
             }
-    	    // Technically, the tag should really be matched
-    	    // separately not as one phrase too.
-    	    query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE { { ";
+            // Technically, the tag should really be matched
+            // separately not as one phrase too.
+            query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE { { ";
             if (filetype)
                 query += " ?urn a nfo:" + filetype + " .";
             else
-       	        query += " ?urn a nfo:FileDataObject .";
-       	    query += " ?urn fts:match \"" + terms_in_sparql + "\" } UNION { ?urn nao:hasTag ?tag . FILTER (fn:contains (fn:lower-case (nao:prefLabel(?tag)), \"" + terms + "\")) }";
-       	    query += " OPTIONAL { ?urn nfo:belongsToContainer ?parent .  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2)). } ORDER BY DESC(nfo:fileLastModified(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
-       	    //  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2) is supposed to filter out folders, but this fails for 'root' folders in which is indexed (as 'Music', 'Documents' and so on ..) - WHY?
+                query += " ?urn a nfo:FileDataObject .";
+            query += " ?urn fts:match \"" + terms_in_sparql + "\" } UNION { ?urn nao:hasTag ?tag . FILTER (fn:contains (fn:lower-case (nao:prefLabel(?tag)), \"" + terms + "\")) }";
+            query += " OPTIONAL { ?urn nfo:belongsToContainer ?parent .  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2)). } ORDER BY DESC(nfo:fileLastModified(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
+            //  ?r2 a nfo:Folder . FILTER(?r2 = ?urn). } . FILTER(!BOUND(?r2) is supposed to filter out folders, but this fails for 'root' folders in which is indexed (as 'Music', 'Documents' and so on ..) - WHY?
 
-    	} else if (this._categoryType == CategoryType.FILES) {
-    	    // TODO: Do we really want this?
-    	} else if (this._categoryType == CategoryType.FOLDERS) {
-    	    query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE {";
-    	    query += "  ?urn a nfo:Folder .";
-    	    query += "  FILTER (fn:contains (fn:lower-case (nfo:fileName(?urn)), '" + terms + "')) .";
-    	    query += "  ?urn nfo:belongsToContainer ?parent ;";
-    	    query += "  tracker:available true .";
-    	    query += "} ORDER BY DESC(nfo:fileLastModified(?urn)) DESC(nie:contentCreated(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
-    	}
+        } else if (this._categoryType == CategoryType.FILES) {
+            // TODO: Do we really want this?
+        } else if (this._categoryType == CategoryType.FOLDERS) {
+            query += "SELECT ?urn nie:url(?urn) tracker:coalesce(nie:title(?urn), nfo:fileName(?urn)) nie:url(?parent) nfo:fileLastModified(?urn) WHERE {";
+            query += "  ?urn a nfo:Folder .";
+            query += "  FILTER (fn:contains (fn:lower-case (nfo:fileName(?urn)), '" + terms + "')) .";
+            query += "  ?urn nfo:belongsToContainer ?parent ;";
+            query += "  tracker:available true .";
+            query += "} ORDER BY DESC(nfo:fileLastModified(?urn)) DESC(nie:contentCreated(?urn)) ASC(nie:title(?urn)) OFFSET 0 LIMIT " + String(MAX_RESULTS);
+        }
 
-    	return query;
+        return query;
     },
 
-    createResultObject: function (result, terms) {
-        let res = new TrackerResult(result);
-        return res;
+    _getResultMeta : function(resultId) {
+        let res = this.resultsMap.get(resultId);
+        let type = res.contentType;
+        let name = res.name;
+        let path = res.path;
+        let filename = res.filename;
+        let lastMod = res.lastMod;
+        let contentType = res.contentType;
+        let prettyPath = res.prettyPath;
+        return {
+            'id':       resultId,
+            'name':     name,
+            'description' : path + " - " + lastMod,
+            'createIcon' : function(size) {
+                let icon = Gio.app_info_get_default_for_type(type, null).get_icon();
+                return new St.Icon({ gicon: icon, 
+                                     icon_size: size });
+            }
+        };
     },
 
     getResultMetas: function(resultIds, callback) {
@@ -167,15 +125,15 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     activateResult : function(result) {
+        var uri = String(result);
         // Action executed when clicked on result
-        var uri = result.id;
         var f = Gio.file_new_for_uri(uri);
         var fileName = f.get_path();
         Util.spawn([DEFAULT_EXEC, fileName]);
     },
 
-    _getResultSet: function (obj, result) {
-    	let results = [];
+    _getResultSet: function (obj, result, callback) {
+        let results = [];
         var cursor = obj.query_finish(result);
         
         try {
@@ -188,12 +146,12 @@ const TrackerSearchProvider = new Lang.Class({
                 var lastMod = "Modified: " + lastMod.split('T')[0];
                 var filename = decodeURI(uri.split('/').pop());
                 // if file does not exist, it won't be shown
-        		var f = Gio.file_new_for_uri(uri);
+                var f = Gio.file_new_for_uri(uri);
 
-        		if(!f.query_exists(null)) {continue;}
+                if(!f.query_exists(null)) {continue;}
 
-        		var path = f.get_path();
-		        // clean up path
+                var path = f.get_path();
+                // clean up path
                 var prettyPath = path.substr(0,path.length - filename.length).replace("/home/" + GLib.get_user_name() , "~");
                 // contentType is an array, the index "1" set true,
                 // if function is uncertain if type is the right one
@@ -211,7 +169,8 @@ const TrackerSearchProvider = new Lang.Class({
                         }
                     };
                 }
-                results.push({
+                results.push(uri);
+                this.resultsMap.set(uri, {
                     'id' : uri,
                     'name' : title,
                     'path' : path,
@@ -222,24 +181,23 @@ const TrackerSearchProvider = new Lang.Class({
                 });
             };
         } catch (error) {
-            global.log("TrackerSearchProvider: Could not traverse results cursor: " + error.message);
+            //global.log("TrackerSearchProvider: Could not traverse results cursor: " + error.message);
         }
-        //print("Tracker _getResultSet found : " + results.length);
         this.searchSystem.setResults(this, results);
     },
 
-    _connection_ready : function(object, result, terms, filetype) {
+    _connection_ready : function(object, result, terms, filetype, callback) {
         try {
             var conn = Tracker.SparqlConnection.get_finish(result);
             var query = this._getQuery(terms, filetype);
-            var cursor = conn.query_async(query, null, this._getResultSet.bind(this));
+            var cursor = conn.query_async(query, null, Lang.bind(this, this._getResultSet, callback));
         } catch (error) {
             global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
             global.log(error.message);
         }
     },
 
-    getInitialResultSet : function(terms) {
+    getInitialResultSet : function(terms, callback, cancellable) {
         // terms holds array of search items
         // check if 1st search term is >2 letters else drop the request
         if(terms.length ===1 && terms[0].length < 3) {
@@ -264,54 +222,55 @@ const TrackerSearchProvider = new Lang.Class({
 
         }
 
-	try {
-            Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype));
-	} catch (error) {
-	    global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
+        try {
+            Tracker.SparqlConnection.get_async(null, Lang.bind(this, this._connection_ready, terms, filetype, callback));
+        } catch (error) {
+            global.log("Querying Tracker failed. Please make sure you have the --GObject Introspection-- package for Tracker installed.");
             global.log(error.message);
-	}
+        }
         return [];
     },
 
-    getSubsearchResultSet : function(previousResults, terms) {
+    getSubsearchResultSet : function(previousResults, terms, callback, cancellable) {
         // check if 1st search term is >2 letters else drop the request
         if(terms.length ===1 && terms[0].length < 3) {
             return [];
         }
-        this.getInitialResultSet(terms);
+        this.getInitialResultSet(terms, callback, cancellable);
         return [];
     },
 
     filterResults : function(results, max) {
         return results.slice(0, max);
+    },
+
+    launchSearch: function(terms) {
+        if(terms.length > 1) {            
+            // tracker-needle doesn't support file types
+            terms = terms[1];   
+        }
+        
+        let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms, null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
+        let context = global.create_app_launch_context(0, -1);
+        app.launch([], context);
     }
 });
 
-function init(meta) {
+function init() {
+//global.log("-------- fmi init: hier sollte die Tracker-Connection aufgebaut werden?");
 }
 
 function enable() {
-	if (!trackerSearchProviderFolders){
-    	trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFolders);
-	}
-
-	if (!trackerSearchProviderFiles) {
-    	trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
-    	Main.overview.addSearchProvider(trackerSearchProviderFiles);
-	}
+    if (!trackerSearchProviderFiles) {
+        trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
+        Main.overview.addSearchProvider(trackerSearchProviderFiles);
+    }
 }
 
 function disable() {
     if (trackerSearchProviderFiles){
-		Main.overview.removeSearchProvider(trackerSearchProviderFiles);
-    	trackerSearchProviderFiles = null;
-    }
-
-    if (trackerSearchProviderFolders) {
-    	Main.overview.removeSearchProvider(trackerSearchProviderFolders);
-    	trackerSearchProviderFolders = null;
+        Main.overview.removeSearchProvider(trackerSearchProviderFiles);
+        trackerSearchProviderFiles = null;
     }
 }
-
 
