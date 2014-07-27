@@ -261,11 +261,11 @@ function init() {
 }
 
 function enable() {
-    if (!trackerSearchProviderFolders){
-        trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
-        //Main.overview.addSearchProvider(trackerSearchProviderFolders);
-        Main.overview.viewSelector._searchResults._searchSystem.addProvider(trackerSearchProviderFolders);
-    }
+//    if (!trackerSearchProviderFolders){
+//        trackerSearchProviderFolders = new TrackerSearchProvider("FOLDERS", CategoryType.FOLDERS);
+//        //Main.overview.addSearchProvider(trackerSearchProviderFolders);
+//        Main.overview.viewSelector._searchResults._searchSystem.addProvider(trackerSearchProviderFolders);
+//    }
 
     if (!trackerSearchProviderFiles) {
         trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
@@ -281,10 +281,10 @@ function disable() {
         trackerSearchProviderFiles = null;
     }
 
-    if (trackerSearchProviderFolders) {
-        //Main.overview.removeSearchProvider(trackerSearchProviderFolders);
-        Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(trackerSearchProviderFolders);
-        trackerSearchProviderFolders = null;
-    }
+//    if (trackerSearchProviderFolders) {
+//        //Main.overview.removeSearchProvider(trackerSearchProviderFolders);
+//        Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(trackerSearchProviderFolders);
+//        trackerSearchProviderFolders = null;
+//    }
 }
 
