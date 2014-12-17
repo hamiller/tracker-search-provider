@@ -270,14 +270,14 @@ function enable() {
     if (!trackerSearchProviderFiles) {
         trackerSearchProviderFiles = new TrackerSearchProvider("FILES", CategoryType.FTS);
         //Main.overview.addSearchProvider(trackerSearchProviderFiles);
-        Main.overview.viewSelector._searchResults._searchSystem.addProvider(trackerSearchProviderFiles);
+        Main.overview.viewSelector._searchResults._registerProvider(trackerSearchProviderFiles);
     }
 }
 
 function disable() {
     if (trackerSearchProviderFiles){
         //Main.overview.removeSearchProvider(trackerSearchProviderFiles);
-        Main.overview.viewSelector._searchResults._searchSystem._unregisterProvider(trackerSearchProviderFiles);
+        Main.overview.viewSelector._searchResults._unregisterProvider(trackerSearchProviderFiles);
         trackerSearchProviderFiles = null;
     }
 
