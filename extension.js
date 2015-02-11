@@ -241,7 +241,7 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     filterResults : function(results, max) {
-        return results.slice(0, 5);
+        return results.slice(0, MAX_RESULTS);
     },
 
     launchSearch: function(terms) {
