@@ -54,7 +54,7 @@ const TrackerSearchProvider = new Lang.Class({
         this._title = title;
         this.id = 'tracker-search-' + title;
         this.appInfo = {get_name : function() {return 'tracker-needle';},
-                        get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/gnome/256x256/actions/system-search.png");},
+                        get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/Adwaita/256x256/actions/system-search.png");},
                         get_id : function() {return this.id;}
         };
         this.resultsMap = new Map();
@@ -158,7 +158,7 @@ const TrackerSearchProvider = new Lang.Class({
         // Action executed when clicked on result
         var f = Gio.file_new_for_uri(uri);
         var fileName = f.get_path();
-        Util.spawn([DEFAULT_EXEC, fileName]);
+		Util.trySpawnCommandLine( DEFAULT_EXEC + " " + fileName);
     },
 
     _getResultSet: function (obj, result, callback) {
