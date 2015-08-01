@@ -274,12 +274,12 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     launchSearch: function(terms) {
-        if(terms.length > 1) {            
+        if(terms.length > 1 && terms[0].length == 1) {
             // tracker-needle doesn't support file types
-            terms = terms[1];   
+            terms.shift();
         }
-        
-        let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms, null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
+
+        let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms.join(' '), null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
         let context = global.create_app_launch_context(0, -1);
         app.launch([], context);
     }
