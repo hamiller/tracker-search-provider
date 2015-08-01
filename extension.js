@@ -157,7 +157,7 @@ const TrackerSearchProvider = new Lang.Class({
         var uri = String(result);
         // Action executed when clicked on result
         var f = Gio.file_new_for_uri(uri);
-        var fileName = f.get_path();
+        var fileName = "\"" + f.get_path() + "\"" ; // double quotes ensure to be able to read files / directories with spaces in name
 		Util.trySpawnCommandLine( DEFAULT_EXEC + " " + fileName);
     },
 
