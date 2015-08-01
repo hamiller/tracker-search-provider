@@ -55,7 +55,7 @@ const TrackerSearchProvider = new Lang.Class({
         this.id = 'tracker-search-' + title;
         this.appInfo = {get_name : function() {return 'tracker-needle';},
                         get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/Adwaita/256x256/actions/system-search.png");},
-                        get_id : function() {return this.id;}
+                        get_id : function() {return 'tracker-needle.desktop';}
         };
         this.resultsMap = new Map();
     },
