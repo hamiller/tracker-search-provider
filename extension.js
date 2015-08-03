@@ -55,7 +55,7 @@ const TrackerSearchProvider = new Lang.Class({
         this.id = 'tracker-search-' + title;
         this.appInfo = {get_name : function() {return 'tracker-needle';},
                         get_icon : function() {return Gio.icon_new_for_string("/usr/share/icons/Adwaita/256x256/actions/system-search.png");},
-                        get_id : function() {return this.id;}
+                        get_id : function() {return 'tracker-needle.desktop';}
         };
         this.resultsMap = new Map();
     },
@@ -157,7 +157,7 @@ const TrackerSearchProvider = new Lang.Class({
         var uri = String(result);
         // Action executed when clicked on result
         var f = Gio.file_new_for_uri(uri);
-        var fileName = f.get_path();
+        var fileName = "\"" + f.get_path() + "\"" ; // double quotes ensure to be able to read files / directories with spaces in name
 		Util.trySpawnCommandLine( DEFAULT_EXEC + " " + fileName);
     },
 
@@ -274,12 +274,12 @@ const TrackerSearchProvider = new Lang.Class({
     },
 
     launchSearch: function(terms) {
-        if(terms.length > 1) {            
+        if(terms.length > 1 && terms[0].length == 1) {
             // tracker-needle doesn't support file types
-            terms = terms[1];   
+            terms.shift();
         }
-        
-        let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms, null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
+
+        let app = Gio.AppInfo.create_from_commandline("tracker-needle " + terms.join(' '), null, Gio.AppInfoCreateFlags.SUPPORTS_STARTUP_NOTIFICATION);
         let context = global.create_app_launch_context(0, -1);
         app.launch([], context);
     }
